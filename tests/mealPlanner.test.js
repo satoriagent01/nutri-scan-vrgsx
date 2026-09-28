@@ -1,59 +1,9 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { calculateMealTotal } from "../src/mealPlanner.js";
 
-// Simulate the calculateMealTotal function behavior
-function calculateMealTotal(products) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return {
-      energy: 0,
-      fats: 0,
-      saturatedFats: 0,
-      carbs: 0,
-      sugars: 0,
-      fiber: 0,
-      protein: 0,
-      salt: 0
-    };
-  }
-
-  const totals = {
-    energy: 0,
-    fats: 0,
-    saturatedFats: 0,
-    carbs: 0,
-    sugars: 0,
-    fiber: 0,
-    protein: 0,
-    salt: 0
-  };
-
-  products.forEach(product => {
-    const grams = product.grams || 0;
-    const per100g = product.nutrition || {};
-    
-    // Calculate values based on grams (nutrition is per 100g)
-    const factor = grams / 100;
-    
-    totals.energy += (per100g.energy || 0) * factor;
-    totals.fats += (per100g.fats || 0) * factor;
-    totals.saturatedFats += (per100g.saturatedFats || 0) * factor;
-    totals.carbs += (per100g.carbs || 0) * factor;
-    totals.sugars += (per100g.sugars || 0) * factor;
-    totals.fiber += (per100g.fiber || 0) * factor;
-    totals.protein += (per100g.protein || 0) * factor;
-    totals.salt += (per100g.salt || 0) * factor;
-  });
-
-  // Round to reasonable precision
-  Object.keys(totals).forEach(key => {
-    totals[key] = Math.round(totals[key] * 100) / 100;
-  });
-
-  return totals;
-}
-
-describe("Meal Planning", () => {
-  test("calculateMealTotal should sum nutritional values from multiple products", () => {
+describe("calculateMealTotal", () => {
+  test("AC1: calculates totals for a single product", () => {
     const products = [
       {
         name: "Chicken Breast",
@@ -68,7 +18,24 @@ describe("Meal Planning", () => {
           protein: 31,
           salt: 0.1
         }
-      },
+      }
+    ];
+
+    const result = calculateMealTotal(products);
+
+    // 200g = 2 * 100g, so multiply per-100g values by 2
+    assert.strictEqual(result.energy, 330);
+    assert.strictEqual(result.fats, 7.2);
+    assert.strictEqual(result.saturatedFats, 2);
+    assert.strictEqual(result.carbs, 0);
+    assert.strictEqual(result.sugars, 0);
+    assert.strictEqual(result.fiber, 0);
+    assert.strictEqual(result.protein, 62);
+    assert.strictEqual(result.salt, 0.2);
+  });
+
+  test("AC2: sums nutritional values from multiple products", () => {
+    const products = [
       {
         name: "Rice",
         grams: 150,
@@ -77,84 +44,111 @@ describe("Meal Planning", () => {
           fats: 0.3,
           saturatedFats: 0.1,
           carbs: 28,
-          sugars: 0.1,
+          sugars: 0,
           fiber: 0.4,
           protein: 2.7,
-          salt: 0.01
+          salt: 0
         }
-      }
-    ];
-
-    const result = calculateMealTotal(products);
-
-    // Chicken 200g: energy 330, fats 7.2, sat 2, carbs 0, sugars 0, fiber 0, protein 62, salt 0.2
-    // Rice 150g: energy 195, fats 0.45, sat 0.15, carbs 42, sugars 0.15, fiber 0.6, protein 4.05, salt 0.015
-    // Total: energy 525, fats 7.65, sat 2.15, carbs 42, sugars 0.15, fiber 0.6, protein 66.05, salt 0.215
-    assert.strictEqual(result.energy, 525);
-    assert.strictEqual(result.fats, 7.65);
-    assert.strictEqual(result.saturatedFats, 2.15);
-    assert.strictEqual(result.carbs, 42);
-    assert.strictEqual(result.sugars, 0.15);
-    assert.strictEqual(result.fiber, 0.6);
-    assert.strictEqual(result.protein, 66.05);
-    assert.strictEqual(result.salt, 0.22);
-  });
-
-  test("calculateMealTotal should handle single product", () => {
-    const products = [
+      },
       {
-        name: "Apple",
+        name: "Broccoli",
         grams: 100,
         nutrition: {
-          energy: 52,
-          fats: 0.2,
+          energy: 34,
+          fats: 0.4,
           saturatedFats: 0,
-          carbs: 14,
-          sugars: 10,
-          fiber: 2.4,
-          protein: 0.3,
-          salt: 0.01
+          carbs: 7,
+          sugars: 1.7,
+          fiber: 2.6,
+          protein: 2.8,
+          salt: 0.03
         }
       }
     ];
 
     const result = calculateMealTotal(products);
 
-    assert.strictEqual(result.energy, 52);
-    assert.strictEqual(result.fats, 0.2);
-    assert.strictEqual(result.saturatedFats, 0);
-    assert.strictEqual(result.carbs, 14);
-    assert.strictEqual(result.sugars, 10);
-    assert.strictEqual(result.fiber, 2.4);
-    assert.strictEqual(result.protein, 0.3);
-    assert.strictEqual(result.salt, 0.01);
+    // Rice 150g: factor 1.5
+    // Rice: energy=195, fats=0.45, saturatedFats=0.15, carbs=42, sugars=0, fiber=0.6, protein=4.05, salt=0
+    // Broccoli 100g: factor 1.0
+    // Broccoli: energy=34, fats=0.4, saturatedFats=0, carbs=7, sugars=1.7, fiber=2.6, protein=2.8, salt=0.03
+    // Total: energy=229, fats=0.85, saturatedFats=0.15, carbs=49, sugars=1.7, fiber=3.2, protein=6.85, salt=0.03
+    assert.strictEqual(result.energy, 229);
+    assert.strictEqual(result.fats, 0.85);
+    assert.strictEqual(result.saturatedFats, 0.15);
+    assert.strictEqual(result.carbs, 49);
+    assert.strictEqual(result.sugars, 1.7);
+    assert.strictEqual(result.fiber, 3.2);
+    assert.strictEqual(result.protein, 6.85);
+    assert.strictEqual(result.salt, 0.03);
   });
 
-  test("calculateMealTotal should handle empty products array", () => {
+  test("AC3: returns zeros for empty array", () => {
     const result = calculateMealTotal([]);
 
-    assert.strictEqual(result.energy, 0);
-    assert.strictEqual(result.fats, 0);
-    assert.strictEqual(result.saturatedFats, 0);
-    assert.strictEqual(result.carbs, 0);
-    assert.strictEqual(result.sugars, 0);
-    assert.strictEqual(result.fiber, 0);
-    assert.strictEqual(result.protein, 0);
-    assert.strictEqual(result.salt, 0);
+    assert.deepStrictEqual(result, {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
   });
 
-  test("calculateMealTotal should handle null/undefined input", () => {
-    const result1 = calculateMealTotal(null);
-    const result2 = calculateMealTotal(undefined);
+  test("AC4: returns zeros for null input", () => {
+    const result = calculateMealTotal(null);
 
-    assert.strictEqual(result1.energy, 0);
-    assert.strictEqual(result2.energy, 0);
+    assert.deepStrictEqual(result, {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
   });
 
-  test("calculateMealTotal should handle products with missing nutrition data", () => {
+  test("AC5: handles products with missing grams (defaults to 0)", () => {
     const products = [
       {
-        name: "Unknown Food",
+        name: "Unknown",
+        nutrition: {
+          energy: 100,
+          fats: 5,
+          saturatedFats: 1,
+          carbs: 10,
+          sugars: 2,
+          fiber: 0.5,
+          protein: 3,
+          salt: 0.1
+        }
+      }
+    ];
+
+    const result = calculateMealTotal(products);
+
+    // No grams means 0, so all values should be 0
+    assert.deepStrictEqual(result, {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
+  });
+
+  test("AC6: handles products with missing nutrition data", () => {
+    const products = [
+      {
+        name: "Unknown",
         grams: 100,
         nutrition: {}
       }
@@ -162,43 +156,55 @@ describe("Meal Planning", () => {
 
     const result = calculateMealTotal(products);
 
-    assert.strictEqual(result.energy, 0);
-    assert.strictEqual(result.fats, 0);
-    assert.strictEqual(result.saturatedFats, 0);
-    assert.strictEqual(result.carbs, 0);
-    assert.strictEqual(result.sugars, 0);
-    assert.strictEqual(result.fiber, 0);
-    assert.strictEqual(result.protein, 0);
-    assert.strictEqual(result.salt, 0);
+    // No nutrition data means all values should be 0
+    assert.deepStrictEqual(result, {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
   });
 
-  test("calculateMealTotal should handle products with missing grams", () => {
+  test("AC7: rounds values to 2 decimal places", () => {
     const products = [
       {
-        name: "Food",
+        name: "Test",
+        grams: 33,
         nutrition: {
           energy: 100,
           fats: 5,
           saturatedFats: 1,
-          carbs: 20,
-          sugars: 5,
-          fiber: 2,
-          protein: 10,
-          salt: 0.3
+          carbs: 10,
+          sugars: 2,
+          fiber: 0.5,
+          protein: 3,
+          salt: 0.1
         }
       }
     ];
 
     const result = calculateMealTotal(products);
 
-    // grams defaults to 0, so all values should be 0
-    assert.strictEqual(result.energy, 0);
-    assert.strictEqual(result.fats, 0);
-    assert.strictEqual(result.saturatedFats, 0);
-    assert.strictEqual(result.carbs, 0);
-    assert.strictEqual(result.sugars, 0);
-    assert.strictEqual(result.fiber, 0);
-    assert.strictEqual(result.protein, 0);
-    assert.strictEqual(result.salt, 0);
+    // 33g = 0.33 * 100g
+    // energy: 100 * 0.33 = 33
+    // fats: 5 * 0.33 = 1.65
+    // saturatedFats: 1 * 0.33 = 0.33
+    // carbs: 10 * 0.33 = 3.3
+    // sugars: 2 * 0.33 = 0.66
+    // fiber: 0.5 * 0.33 = 0.165 -> rounded to 0.17
+    // protein: 3 * 0.33 = 0.99
+    // salt: 0.1 * 0.33 = 0.033 -> rounded to 0.03
+    assert.strictEqual(result.energy, 33);
+    assert.strictEqual(result.fats, 1.65);
+    assert.strictEqual(result.saturatedFats, 0.33);
+    assert.strictEqual(result.carbs, 3.3);
+    assert.strictEqual(result.sugars, 0.66);
+    assert.strictEqual(result.fiber, 0.17);
+    assert.strictEqual(result.protein, 0.99);
+    assert.strictEqual(result.salt, 0.03);
   });
 });
