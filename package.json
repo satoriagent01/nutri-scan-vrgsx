@@ -1,9 +1,12 @@
 {
   "name": "nutri-scan-vrgsx",
   "version": "1.0.0",
-  "description": "Free, ad-free nutrition tracking app",
+  "description": "Nutrition scanning and meal planning application",
   "type": "module",
   "scripts": {
     "test": "node --test"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
