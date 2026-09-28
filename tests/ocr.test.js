@@ -1,84 +1,41 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { extractNutrition } from "../src/ocr.js";
 
-// Mock localStorage for browser-like environment in Node.js
-const mockStorage = {};
-global.localStorage = {
-  getItem: (key) => mockStorage[key] || null,
-  setItem: (key, value) => { mockStorage[key] = value; },
-  removeItem: (key) => { delete mockStorage[key]; },
-  clear: () => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); }
-};
+describe("extractNutrition", () => {
+  test("AC1: extracts all nutritional values from OCR results", () => {
+    const ocrResults = {
+      energy: "250 kcal",
+      fats: "10g",
+      saturatedFats: "3g",
+      carbs: "30g",
+      sugars: "12g",
+      fiber: "2g",
+      protein: "8g",
+      salt: "0.5g"
+    };
 
-// Mock OCR results that would come from a scanning API
-const mockOcrResults = {
-  energy: "250 kcal",
-  fats: "10g",
-  saturatedFats: "3g",
-  carbs: "35g",
-  sugars: "12g",
-  fiber: "5g",
-  protein: "8g",
-  salt: "0.5g"
-};
+    const result = extractNutrition(ocrResults);
 
-// Simulate the extractNutrition function behavior
-function extractNutrition(ocrResults) {
-  const parseValue = (value, unit) => {
-    if (!value) return 0;
-    const num = parseFloat(value.replace(unit, "").trim());
-    return isNaN(num) ? 0 : num;
-  };
-
-  return {
-    energy: parseValue(ocrResults.energy, "kcal"),
-    fats: parseValue(ocrResults.fats, "g"),
-    saturatedFats: parseValue(ocrResults.saturatedFats, "g"),
-    carbs: parseValue(ocrResults.carbs, "g"),
-    sugars: parseValue(ocrResults.sugars, "g"),
-    fiber: parseValue(ocrResults.fiber, "g"),
-    protein: parseValue(ocrResults.protein, "g"),
-    salt: parseValue(ocrResults.salt, "g")
-  };
-}
-
-describe("OCR Extraction", () => {
-  test("extractNutrition should parse all nutritional values from OCR results", () => {
-    const result = extractNutrition(mockOcrResults);
-    
     assert.strictEqual(result.energy, 250);
     assert.strictEqual(result.fats, 10);
     assert.strictEqual(result.saturatedFats, 3);
-    assert.strictEqual(result.carbs, 35);
+    assert.strictEqual(result.carbs, 30);
     assert.strictEqual(result.sugars, 12);
-    assert.strictEqual(result.fiber, 5);
+    assert.strictEqual(result.fiber, 2);
     assert.strictEqual(result.protein, 8);
     assert.strictEqual(result.salt, 0.5);
   });
 
-  test("extractNutrition should handle missing values", () => {
-    const partialResults = {
+  test("AC2: returns zeros for missing values", () => {
+    const ocrResults = {
       energy: "250 kcal",
-      fats: "10g",
-      // other fields missing
+      // fats, saturatedFats, carbs, sugars, fiber, protein, salt are missing
     };
-    
-    const result = extractNutrition(partialResults);
-    
-    assert.strictEqual(result.energy, 250);
-    assert.strictEqual(result.fats, 10);
-    assert.strictEqual(result.saturatedFats, 0);
-    assert.strictEqual(result.carbs, 0);
-    assert.strictEqual(result.sugars, 0);
-    assert.strictEqual(result.fiber, 0);
-    assert.strictEqual(result.protein, 0);
-    assert.strictEqual(result.salt, 0);
-  });
 
-  test("extractNutrition should handle empty OCR results", () => {
-    const result = extractNutrition({});
-    
-    assert.strictEqual(result.energy, 0);
+    const result = extractNutrition(ocrResults);
+
+    assert.strictEqual(result.energy, 250);
     assert.strictEqual(result.fats, 0);
     assert.strictEqual(result.saturatedFats, 0);
     assert.strictEqual(result.carbs, 0);
@@ -88,26 +45,98 @@ describe("OCR Extraction", () => {
     assert.strictEqual(result.salt, 0);
   });
 
-  test("extractNutrition should handle malformed values", () => {
-    const malformedResults = {
-      energy: "invalid",
+  test("AC3: returns all zeros for null/undefined input", () => {
+    assert.deepStrictEqual(extractNutrition(null), {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
+
+    assert.deepStrictEqual(extractNutrition(undefined), {
+      energy: 0,
+      fats: 0,
+      saturatedFats: 0,
+      carbs: 0,
+      sugars: 0,
+      fiber: 0,
+      protein: 0,
+      salt: 0
+    });
+  });
+
+  test("AC4: handles malformed values by returning 0", () => {
+    const ocrResults = {
+      energy: "not a number kcal",
       fats: "abcg",
       saturatedFats: "3g",
-      carbs: "35g",
+      carbs: "30g",
       sugars: "12g",
-      fiber: "5g",
+      fiber: "2g",
       protein: "8g",
       salt: "0.5g"
     };
-    
-    const result = extractNutrition(malformedResults);
-    
+
+    const result = extractNutrition(ocrResults);
+
     assert.strictEqual(result.energy, 0);
     assert.strictEqual(result.fats, 0);
     assert.strictEqual(result.saturatedFats, 3);
-    assert.strictEqual(result.carbs, 35);
+    assert.strictEqual(result.carbs, 30);
     assert.strictEqual(result.sugars, 12);
-    assert.strictEqual(result.fiber, 5);
+    assert.strictEqual(result.fiber, 2);
+    assert.strictEqual(result.protein, 8);
+    assert.strictEqual(result.salt, 0.5);
+  });
+
+  test("AC5: handles empty string values", () => {
+    const ocrResults = {
+      energy: "",
+      fats: "",
+      saturatedFats: "",
+      carbs: "",
+      sugars: "",
+      fiber: "",
+      protein: "",
+      salt: ""
+    };
+
+    const result = extractNutrition(ocrResults);
+
+    assert.strictEqual(result.energy, 0);
+    assert.strictEqual(result.fats, 0);
+    assert.strictEqual(result.saturatedFats, 0);
+    assert.strictEqual(result.carbs, 0);
+    assert.strictEqual(result.sugars, 0);
+    assert.strictEqual(result.fiber, 0);
+    assert.strictEqual(result.protein, 0);
+    assert.strictEqual(result.salt, 0);
+  });
+
+  test("AC6: handles values with extra whitespace", () => {
+    const ocrResults = {
+      energy: "  250 kcal  ",
+      fats: "  10g  ",
+      saturatedFats: "  3g  ",
+      carbs: "  30g  ",
+      sugars: "  12g  ",
+      fiber: "  2g  ",
+      protein: "  8g  ",
+      salt: "  0.5g  "
+    };
+
+    const result = extractNutrition(ocrResults);
+
+    assert.strictEqual(result.energy, 250);
+    assert.strictEqual(result.fats, 10);
+    assert.strictEqual(result.saturatedFats, 3);
+    assert.strictEqual(result.carbs, 30);
+    assert.strictEqual(result.sugars, 12);
+    assert.strictEqual(result.fiber, 2);
     assert.strictEqual(result.protein, 8);
     assert.strictEqual(result.salt, 0.5);
   });
